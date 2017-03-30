@@ -419,7 +419,7 @@ namespace casadi {
       vector<MX> resv;
       vector<MX> argv = nlp.mx_in();
       resv = nlp(argv);
-    
+
       // build fesibility restoration phase nlp
       MX p = MX::sym("p",nlp.size1_in(0));
       MX s = MX::sym("s",nlp.size1_out(1));
@@ -430,7 +430,7 @@ namespace casadi {
       MX d = MX::vertcat(D);
       MX f_rp = 0.5 * rho_ * dot(s,s) + zeta_/2.0 * dot(d,d);
       MX g_rp = nlp(argv).at(1) - s;
-      
+
       MXDict nlp_rp = {{"x", MX::vertcat({MX::vertcat(argv),s})},
 	               {"p", p},
                        {"f", f_rp},
@@ -449,7 +449,7 @@ namespace casadi {
       solver_options["opttol"] = opttol_;
       solver_options["nlinfeastol"] = nlinfeastol_;
       rp_solver_ = nlpsol("rpsolver", "blocksqp", nlp_rp, solver_options);
-      
+
       DMDict solver_in;
       solver_in["x0"]=vector<double>{1,1,2};
       solver_in["p"]=vector<double>{1,1};
@@ -464,7 +464,7 @@ namespace casadi {
       cout << "x_opt = " << x_opt << endl;
       */
 
-      /*
+
       // test with 1 iteration, then blocksqp::run with warmstart
       Dict solver_options;
       solver_options["globalization"] = true;
@@ -486,19 +486,81 @@ namespace casadi {
       solver_in["lbg"]=-10;
       solver_in["ubg"]=10;
 
-      auto solver_out = rp_solver_(solver_in);
+      /*
+
+        Consider the following simple call:
+        auto solver_out = rp_solver_(solver_in);
+
+        This call in fact allocates memory,
+        calls a memory-less eval(),
+        and clears up the memory again.
+
+        Since we want to access the memory later on,
+        we need to unravel the simple call into its parts,
+        and avoid the memory cleanup
+
+      */
+      DMDict solver_out;
+
+      // Get the number of inputs and outputs
+      int n_in = rp_solver_.n_in();
+      int n_out = rp_solver_.n_out();
+
+      // Get default inputs
+      vector<DM> arg_v(n_in);
+      for (int i=0; i<arg_v.size(); ++i)
+        arg_v[i] = DM::repmat(rp_solver_.default_in(i), rp_solver_.size1_in(i), 1);
+
+      // Assign provided inputs
+      for (auto&& e : solver_in) arg_v.at(rp_solver_.index_in(e.first)) = e.second;
+
+      // Check sparsities
+      for (int i=0; i<arg_v.size(); ++i)
+        casadi_assert(arg_v[i].sparsity()==rp_solver_.sparsity_in(i));
+
+      // Allocate results
+      std::vector<DM> res(n_out);
+      for (int i=0; i<n_out; ++i) {
+        if (res[i].sparsity()!=rp_solver_.sparsity_out(i))
+          res[i] = DM::zeros(rp_solver_.sparsity_out(i));
+      }
+
+      // Allocate temporary memory if needed
+      std::vector<int> iw_tmp(rp_solver_.sz_iw());
+      std::vector<double> w_tmp(rp_solver_.sz_w());
+
+      // Get pointers to input arguments
+      std::vector<const double*> argp(rp_solver_.sz_arg());
+      for (int i=0; i<n_in; ++i) argp[i]=get_ptr(arg_v[i]);
+
+      // Get pointers to output arguments
+      std::vector<double*> resp(rp_solver_.sz_res());
+      for (int i=0; i<n_out; ++i) resp[i]=get_ptr(res[i]);
+
+      void* mem2 = rp_solver_.memory(0);
+
+      // perform The m
+      rp_solver_->eval(mem2, get_ptr(argp), get_ptr(resp), get_ptr(iw_tmp), get_ptr(w_tmp));
+
+      // Save to map
+      for (int i=0; i<res.size(); ++i) {
+        solver_out[rp_solver_.name_out(i)] = res[i];
+      }
 
       vector<double> x_opt(solver_out.at("x"));
       cout << "x_opt = " << x_opt << endl;
 
-      void* mem2 = rp_solver_.memory(0);
+      cout << "obj = " << solver_out.at("f") << endl;
+
       auto m2 = static_cast<BlocksqpMemory*>(mem2);
+
+      userOut() << "obj = " << m2->obj << std::endl;
       const Blocksqp* bp = static_cast<const Blocksqp*>(rp_solver_.get());
-      bp->run(m2,1,1); // try run with warmstart <- doesn't work (getting segmentation fault (core dumped))
-      mem2 = rp_solver_.memory(0);
-      m2 = static_cast<BlocksqpMemory*>(mem2);
+
+      bp->run(m2,1,1);
+
       cout << "HERE OBJ AFTER SOLVE: " << m2->obj << endl;
-      */
+
     }
 
     // Setup NLP functions
