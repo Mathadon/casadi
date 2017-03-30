@@ -13313,6 +13313,10 @@ Dennis Janka, Joel Andersson
 | restore_feas           | OT_BOOL                | Use feasibility        |
 |                        |                        | restoration phase      |
 +------------------------+------------------------+------------------------+
+| rho                    | OT_DOUBLE              | Feasibility            |
+|                        |                        | restoration phase      |
+|                        |                        | parameter              |
++------------------------+------------------------+------------------------+
 | s_f                    | OT_DOUBLE              | Filter line search     |
 |                        |                        | parameter, cf. IPOPT   |
 |                        |                        | paper                  |
@@ -13341,6 +13345,10 @@ Dennis Janka, Joel Andersson
 | which_second_derv      | OT_INT                 | For which block should |
 |                        |                        | second derivatives be  |
 |                        |                        | provided by the user   |
++------------------------+------------------------+------------------------+
+| zeta                   | OT_DOUBLE              | Feasibility            |
+|                        |                        | restoration phase      |
+|                        |                        | parameter              |
 +------------------------+------------------------+------------------------+
 
 --------------------------------------------------------------------------------
