@@ -1082,6 +1082,8 @@ namespace casadi {
       if (first) {
         s << "  real_t ";
         first = false;
+      } else if(i%100==0) { // split definition across multiple lines if needed - see https://groups.google.com/forum/#!topic/casadi-users/FNqBF6ilFgc for a motivation
+        s << ";\n  real_t ";
       } else {
         s << ", ";
       }
