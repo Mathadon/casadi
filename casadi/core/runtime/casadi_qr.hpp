@@ -3,6 +3,7 @@
 // Householder reflection
 // Ref: Chapter 5, Direct Methods for Sparse Linear Systems by Tim Davis
 template<typename T1>
+// no static prepend here since sanitize_source() will add it
 T1 casadi_house(T1* v, T1* beta, casadi_int nv) {
   // Local variable
   casadi_int i;
@@ -32,6 +33,8 @@ T1 casadi_house(T1* v, T1* beta, casadi_int nv) {
 // len[r] nnz_r
 // len[beta] ncol
 template<typename T1>
+// the replace command below matches multiple functions below that start with "void casadi_qr"
+// C-REPLACE "void casadi_qr" "static void casadi_qr" 
 void casadi_qr(const casadi_int* sp_a, const T1* nz_a, T1* x,
                const casadi_int* sp_v, T1* nz_v, const casadi_int* sp_r, T1* nz_r, T1* beta,
                const casadi_int* prinv, const casadi_int* pc) {
@@ -181,6 +184,7 @@ void casadi_qr_solve(T1* x, casadi_int nrhs, casadi_int tr,
 // SYMBOL "qr_singular"
 // Check if QR factorization corresponds to a singular matrix
 template<typename T1>
+// C-REPLACE "casadi_int casadi_qr" "static casadi_int casadi_qr" 
 casadi_int casadi_qr_singular(T1* rmin, casadi_int* irmin, const T1* nz_r,
                              const casadi_int* sp_r, const casadi_int* pc, T1 eps) {
   // Local variables

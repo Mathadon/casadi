@@ -275,6 +275,7 @@ namespace casadi {
     casadi_assert(prefix.find(this->name + this->suffix)==string::npos,
        "The signature of CodeGenerator::generate has changed. "
        "Instead of providing the filename, only provide the prefix.");
+    std::string allNames;
     {
       // Create c file
       ofstream s;
@@ -328,6 +329,8 @@ namespace casadi {
 
       // Finalize file
       file_close(s);
+
+      allNames=prefix + this->name + "_common";
     }
 
     // Create c file
@@ -346,6 +349,7 @@ namespace casadi {
 
     // Finalize file
     file_close(s);
+    allNames=allNames+";"+prefix + this->name;
 
     // Generate header
     if (this->with_header) {
@@ -368,10 +372,11 @@ namespace casadi {
       file_close(s);
     }
     
+
     for (const auto& e : body_parts) {
       // Create c file
       ofstream s;
-      string fullname = prefix + this->name + "_" + e.first + this->suffix;
+      std::string fullname = prefix + this->name + "_" + e.first + this->suffix;
       file_open(s, fullname);
 
       // Dump code to file
@@ -380,8 +385,11 @@ namespace casadi {
       // Finalize file
       file_close(s);
 
+      allNames=allNames+";"+prefix + this->name + "_" + e.first;
+
     }
-    return fullname;
+
+    return allNames;
   }
 
   void CodeGenerator::generate_mex(std::ostream &s) const {
@@ -508,10 +516,10 @@ namespace casadi {
       s << endl << endl;
     }
 
+    s << casadi_headers.str();
+
     // Codegen auxiliary functions
     s << this->auxiliaries.str();
-
-    s << casadi_headers.str();
 
     // Codegen body
     s << body;
@@ -874,16 +882,16 @@ namespace casadi {
       break;
     case AUX_SQ:
       shorthand("sq");
-      this->auxiliaries << "casadi_real casadi_sq(casadi_real x) { return x*x;}\n\n";
+      this->auxiliaries << "static casadi_real casadi_sq(casadi_real x) { return x*x;}\n\n";
       break;
     case AUX_SIGN:
       shorthand("sign");
-      this->auxiliaries << "casadi_real casadi_sign(casadi_real x) "
+      this->auxiliaries << "static casadi_real casadi_sign(casadi_real x) "
                         << "{ return x<0 ? -1 : x>0 ? 1 : x;}\n\n";
       break;
     case AUX_IF_ELSE:
       shorthand("if_else");
-      this->auxiliaries << "casadi_real casadi_if_else"
+      this->auxiliaries << "static casadi_real casadi_if_else"
                         << "(casadi_real c, casadi_real x, casadi_real y) "
                         << "{ return c!=0 ? x : y;}\n\n";
       break;
@@ -900,7 +908,7 @@ namespace casadi {
       break;
     case AUX_FMIN:
       shorthand("fmin");
-      this->auxiliaries << "casadi_real casadi_fmin(casadi_real x, casadi_real y) {\n"
+      this->auxiliaries << "static casadi_real casadi_fmin(casadi_real x, casadi_real y) {\n"
                         << "/* Pre-c99 compatibility */\n"
                         << "#if __STDC_VERSION__ < 199901L\n"
                         << "  return x<y ? x : y;\n"
@@ -911,7 +919,7 @@ namespace casadi {
       break;
     case AUX_FMAX:
       shorthand("fmax");
-      this->auxiliaries << "casadi_real casadi_fmax(casadi_real x, casadi_real y) {\n"
+      this->auxiliaries << "static casadi_real casadi_fmax(casadi_real x, casadi_real y) {\n"
                         << "/* Pre-c99 compatibility */\n"
                         << "#if __STDC_VERSION__ < 199901L\n"
                         << "  return x>y ? x : y;\n"
